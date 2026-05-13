@@ -62,9 +62,10 @@ export async function processUserIntent(
           },
         },
       ]);
-
+      const allTasks = await taskAgent.getTasks();
       return {
         text: finalResult.response.text(),
+        tasks: allTasks,
         updatedHistory: await chat.getHistory(),
       };
     } catch (error: any) {
@@ -80,14 +81,18 @@ export async function processUserIntent(
           },
         },
       ]);
+      const currentTasks = await taskAgent.getTasks();
       return {
         text: errorResult.response.text(),
+        tasks: currentTasks,
         updatedHistory: await chat.getHistory(),
       };
     }
   }
+  const finalTasks = await taskAgent.getTasks();
   return {
     text: response.text(),
+    tasks: finalTasks,
     updatedHistory: await chat.getHistory(),
   };
 }

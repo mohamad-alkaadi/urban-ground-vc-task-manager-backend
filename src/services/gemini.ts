@@ -80,7 +80,7 @@ const taskTools: Tool = {
 
 // 2. Initialize the model with the tools
 export const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash",
   tools: [taskTools],
   // Add this to fulfill the "Real AI Voice Agent" requirement
   systemInstruction: `

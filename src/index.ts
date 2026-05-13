@@ -49,7 +49,11 @@ io.on("connection", (socket) => {
 
       try {
         const result = await processUserIntent(data.message, data.history);
-        socket.emit("ai-response", result);
+        socket.emit("ai-response", {
+          text: result.text,
+          tasks: result.tasks,
+          updatedHistory: result.updatedHistory,
+        });
         logger.info(
           { socketId: socket.id },
           "📤 Sent AI response back to client",

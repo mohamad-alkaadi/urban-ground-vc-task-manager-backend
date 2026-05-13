@@ -16,7 +16,6 @@ export const taskAgent = {
       .from("tasks")
       .select("*")
       .order("due_date", { ascending: true });
-
     if (error) throw new Error(error.message);
     return data;
   },
