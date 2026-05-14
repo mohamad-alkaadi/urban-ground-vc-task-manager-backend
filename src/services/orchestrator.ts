@@ -6,6 +6,7 @@ export async function processUserIntent(
   userMessage: string,
   history: any[] = [],
 ) {
+  const isInitialFetch = userMessage === "get all my tasks";
   logger.info({ userMessage }, "🧠 Processing new user message");
   const chat = model.startChat({
     history: history,
@@ -63,10 +64,15 @@ export async function processUserIntent(
         },
       ]);
       const allTasks = await taskAgent.getTasks();
+      let aiResponseText = finalResult.response.text();
+      if (name === "getTasks" && isInitialFetch) {
+        aiResponseText = ""; // Return empty text so TTS stays quiet
+      }
       return {
-        text: finalResult.response.text(),
+        text: aiResponseText,
         tasks: allTasks,
         updatedHistory: await chat.getHistory(),
+        // isSilent: true,
       };
     } catch (error: any) {
       logger.error(
@@ -91,8 +97,9 @@ export async function processUserIntent(
   }
   const finalTasks = await taskAgent.getTasks();
   return {
-    text: response.text(),
+    text: isInitialFetch ? "" : response.text(),
     tasks: finalTasks,
     updatedHistory: await chat.getHistory(),
+    // isSilent: true,
   };
 }

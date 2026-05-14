@@ -53,6 +53,7 @@ io.on("connection", (socket) => {
           text: result.text,
           tasks: result.tasks,
           updatedHistory: result.updatedHistory,
+          // isSilent: result.isSilent || false,
         });
         logger.info(
           { socketId: socket.id },
