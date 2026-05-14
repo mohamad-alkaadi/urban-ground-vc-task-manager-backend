@@ -1,4 +1,4 @@
-import { model } from "./gemini";
+import { model, BASE_SYSTEM_INSTRUCTIONS } from "./gemini";
 import { taskAgent } from "../agents/taskAgent";
 import { logger } from "./logger";
 
@@ -7,99 +7,102 @@ export async function processUserIntent(
   history: any[] = [],
 ) {
   const isInitialFetch = userMessage === "get all my tasks";
-  logger.info({ userMessage }, "🧠 Processing new user message");
-  const chat = model.startChat({
-    history: history,
+
+  const now = new Date();
+  const berlinTime = now.toLocaleString("en-DE", {
+    timeZone: "Europe/Berlin",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
-  let result = await chat.sendMessage(userMessage);
-  let response = result.response;
+  // 2. Inject it into this specific chat session
+  const dynamicInstruction = `
+    ${BASE_SYSTEM_INSTRUCTIONS}
+    
+    CRITICAL TIME CONTEXT:
+    - Today's Date and Time: ${berlinTime}
+    - Location: Berlin, Germany
+  `;
 
-  const call = response.functionCalls()?.[0] as
-    | { name: string; args: Record<string, any> }
-    | undefined;
+  // 3. Inject the merged instructions
+  const chat = model.startChat({
+    history,
+    systemInstruction: {
+      role: "system",
+      parts: [{ text: dynamicInstruction }],
+    },
+  });
+  const result = await chat.sendMessage(userMessage);
+  const response = result.response;
+  const calls = response.functionCalls();
 
-  if (call) {
-    const { name, args } = call;
+  if (calls && calls.length > 0) {
     logger.info(
-      { tool: name, arguments: args },
-      "🤖 AI Decision: Calling tool",
+      { count: calls.length },
+      "🤖 AI Intent: Multiple actions detected",
     );
 
-    let toolResult;
+    const toolResponses = [];
 
-    try {
-      switch (name) {
-        case "createTask":
-          toolResult = await taskAgent.createTask(
-            args.title as string,
-            args.due_date as string,
-          );
-          break;
-        case "getTasks":
-          toolResult = await taskAgent.getTasks();
-          break;
-        case "updateTask":
-          toolResult = await taskAgent.updateTask(
-            args.id as number,
-            args.updates as any,
-          );
-          break;
-        case "deleteTask":
-          toolResult = await taskAgent.deleteTask(args.id as number);
-          break;
-        default:
-          throw new Error(`Unknown tool: ${name}`);
+    // 1. PROCESS ALL CALLS FIRST (No 'return' inside this loop!)
+    for (const call of calls) {
+      const { name, args } = call;
+      const typedArgs = args as any;
+      let toolResult;
+
+      try {
+        switch (name) {
+          case "createTask":
+            toolResult = await taskAgent.createTask(
+              typedArgs.title,
+              typedArgs.due_date,
+            );
+            break;
+          case "updateTask":
+            toolResult = await taskAgent.updateTask(
+              typedArgs.id,
+              typedArgs.updates,
+            );
+            break;
+          case "deleteTask":
+            toolResult = await taskAgent.deleteTask(typedArgs.id);
+            break;
+          case "getTasks":
+            toolResult = await taskAgent.getTasks();
+            break;
+        }
+
+        toolResponses.push({
+          functionResponse: { name, response: { content: toolResult } },
+        });
+      } catch (error: any) {
+        toolResponses.push({
+          functionResponse: { name, response: { error: error.message } },
+        });
       }
-      logger.info(
-        { tool: name, status: "success" },
-        "✅ Tool execution complete",
-      );
-      const finalResult = await chat.sendMessage([
-        {
-          functionResponse: {
-            name,
-            response: { content: toolResult },
-          },
-        },
-      ]);
-      const allTasks = await taskAgent.getTasks();
-      let aiResponseText = finalResult.response.text();
-      if (name === "getTasks" && isInitialFetch) {
-        aiResponseText = ""; // Return empty text so TTS stays quiet
-      }
-      return {
-        text: aiResponseText,
-        tasks: allTasks,
-        updatedHistory: await chat.getHistory(),
-        // isSilent: true,
-      };
-    } catch (error: any) {
-      logger.error(
-        { tool: name, error: error.message },
-        "❌ Tool execution failed",
-      );
-      const errorResult = await chat.sendMessage([
-        {
-          functionResponse: {
-            name,
-            response: { error: error.message },
-          },
-        },
-      ]);
-      const currentTasks = await taskAgent.getTasks();
-      return {
-        text: errorResult.response.text(),
-        tasks: currentTasks,
-        updatedHistory: await chat.getHistory(),
-      };
     }
+
+    // 2. SEND ALL RESULTS TO GEMINI AT ONCE
+    // This allows Gemini to summarize everything in one natural sentence.
+    const finalResult = await chat.sendMessage(toolResponses);
+    const allTasks = await taskAgent.getTasks();
+
+    return {
+      text: isInitialFetch ? "" : finalResult.response.text(),
+      tasks: allTasks,
+      updatedHistory: await chat.getHistory(),
+    };
   }
+
+  // 3. DEFAULT CASE (If no tools were called)
   const finalTasks = await taskAgent.getTasks();
   return {
     text: isInitialFetch ? "" : response.text(),
     tasks: finalTasks,
     updatedHistory: await chat.getHistory(),
-    // isSilent: true,
   };
 }
