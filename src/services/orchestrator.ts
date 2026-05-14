@@ -1,6 +1,5 @@
 import { BASE_SYSTEM_INSTRUCTIONS, genAI, taskTools } from "./gemini";
 import { taskAgent } from "../agents/taskAgent";
-// import { logger } from "./logger";
 
 export async function processUserIntent(
   userMessage: string,
@@ -43,10 +42,9 @@ export async function processUserIntent(
   const calls = response.functionCalls();
 
   if (calls && calls.length > 0) {
-    // logger.info(
-    //   { count: calls.length },
-    //   "🤖 AI Intent: Multiple actions detected",
-    // );
+    console.log("🤖 AI Intent: Multiple actions detected", {
+      count: calls.length,
+    });
 
     const toolResponses = [];
 
