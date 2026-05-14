@@ -3,10 +3,12 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+export const genAI = new GoogleGenerativeAI(
+  process.env.GEMINI_API_KEY as string,
+);
 
 // 1. Define the tools the AI can use to manage tasks [cite: 27, 28]
-const taskTools: Tool = {
+export const taskTools: Tool = {
   functionDeclarations: [
     {
       name: "createTask",
@@ -98,7 +100,7 @@ export const BASE_SYSTEM_INSTRUCTIONS = `
     3. FRIENDLY FORMATS: Use natural time and never include seconds.
 `;
 // 2. Initialize the model with the tools
-export const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash-lite",
-  tools: [taskTools],
-});
+// export const model = genAI.getGenerativeModel({
+//   model: "gemini-2.5-flash-lite",
+//   tools: [taskTools],
+// });

@@ -1,4 +1,4 @@
-import { model, BASE_SYSTEM_INSTRUCTIONS } from "./gemini";
+import { BASE_SYSTEM_INSTRUCTIONS, genAI, taskTools } from "./gemini";
 import { taskAgent } from "../agents/taskAgent";
 import { logger } from "./logger";
 
@@ -28,14 +28,16 @@ export async function processUserIntent(
     - Location: Berlin, Germany
   `;
 
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    tools: [taskTools],
+    systemInstruction: dynamicInstruction, // 👈 It is locked in perfectly now
+  });
   // 3. Inject the merged instructions
   const chat = model.startChat({
-    history,
-    systemInstruction: {
-      role: "system",
-      parts: [{ text: dynamicInstruction }],
-    },
+    history: history,
   });
+
   const result = await chat.sendMessage(userMessage);
   const response = result.response;
   const calls = response.functionCalls();
