@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import * as dotenv from "dotenv";
 import pinoHttp from "pino-http";
-import { logger } from "./services/logger";
+// import { logger } from "./services/logger";
 import { processUserIntent } from "./services/orchestrator";
 
 dotenv.config();
@@ -20,7 +20,7 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
-app.use(pinoHttp({ logger }));
+// app.use(pinoHttp({ logger }));
 
 const PORT = process.env.PORT || 5000;
 
@@ -35,17 +35,17 @@ app.post("/api/chat", async (req, res) => {
     const result = await processUserIntent(message, history);
     res.json(result);
   } catch (error: any) {
-    logger.error({ error: error.message }, "❌ HTTP Route Error");
+    // logger.error({ error: error.message }, "❌ HTTP Route Error");
     res.status(500).json({ error: "The AI brain is feeling a bit foggy." });
   }
 });
 
 io.on("connection", (socket) => {
-  logger.info({ socketId: socket.id }, "🔌 New client connected via WebSocket");
+  // logger.info({ socketId: socket.id }, "🔌 New client connected via WebSocket");
   socket.on(
     "user-message",
     async (data: { message: string; history: any[] }) => {
-      logger.info({ socketId: socket.id }, "🎙️ Received voice-to-text message");
+      // logger.info({ socketId: socket.id }, "🎙️ Received voice-to-text message");
 
       try {
         const result = await processUserIntent(data.message, data.history);
@@ -55,12 +55,12 @@ io.on("connection", (socket) => {
           updatedHistory: result.updatedHistory,
           // isSilent: result.isSilent || false,
         });
-        logger.info(
-          { socketId: socket.id },
-          "📤 Sent AI response back to client",
-        );
+        // logger.info(
+        //   { socketId: socket.id },
+        //   "📤 Sent AI response back to client",
+        // );
       } catch (error: any) {
-        logger.error({ error: error.message }, "❌ WebSocket Processing Error");
+        // logger.error({ error: error.message }, "❌ WebSocket Processing Error");
         socket.emit("error", {
           message: "Something went wrong processing your voice.",
         });
@@ -68,11 +68,11 @@ io.on("connection", (socket) => {
     },
   );
   socket.on("disconnect", () => {
-    logger.info({ socketId: socket.id }, "🔌 Client disconnected");
+    // logger.info({ socketId: socket.id }, "🔌 Client disconnected");
   });
 });
 
 httpServer.listen(PORT, () => {
-  logger.info(`🚀 Server is running on http://localhost:${PORT}`);
-  logger.info(`✨ Ready to manage tasks in Berlin!`);
+  // logger.info(`🚀 Server is running on http://localhost:${PORT}`);
+  // logger.info(`✨ Ready to manage tasks in Berlin!`);
 });
