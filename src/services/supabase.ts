@@ -6,10 +6,8 @@ dotenv.config();
 const supabaseUrl = (process.env.SUPABASE_URL as string) || "";
 const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY as string) || "";
 
+// Initialize the Supabase client with WebSocket support for real-time features, which will be used by the taskAgent to interact with the "tasks" table in the database.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  // Any existing auth configs stay here...
-
-  // Inject the WebSocket transport for realtime connections
   realtime: {
     transport: ws as any,
   },

@@ -8,6 +8,7 @@ import { Content } from "@google/generative-ai";
 
 dotenv.config();
 
+// Initialize the Express app and HTTP server, and set up Socket.IO for real-time communication with clients, allowing us to handle both HTTP requests and WebSocket connections.
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -22,6 +23,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
+// Define an HTTP POST route at /api/chat that receives user messages and chat history, processes the user's intent using the Gemini model, and returns the AI's response along with the current tasks and updated chat history. This allows clients to interact with the AI via standard HTTP requests.
 app.post("/api/chat", async (req, res) => {
   const { message, history } = req.body;
 
@@ -38,6 +40,14 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+/*
+    Set up Socket.IO to listen for new client connections, 
+    handle incoming user messages sent via WebSocket, 
+    process those messages using the Gemini model, 
+    and emit the AI's response back to the client. 
+    This enables real-time interactions with the AI, 
+    which is especially useful for voice-to-text scenarios where users expect immediate feedback.
+*/
 io.on("connection", (socket) => {
   console.log("🔌 New client connected via WebSocket", {
     socketId: socket.id,
@@ -61,6 +71,7 @@ io.on("connection", (socket) => {
           socketId: socket.id,
         });
       } catch (error: any) {
+        // If there is an error during the processing of the user's message, we log the error and emit an error message back to the client.
         console.log("❌ WebSocket Processing Error", { error: error.message });
         socket.emit("error", {
           message: "Something went wrong processing your voice.",
@@ -68,6 +79,8 @@ io.on("connection", (socket) => {
       }
     },
   );
+
+  // Listen for the disconnect event to log when a client disconnects from the WebSocket.
   socket.on("disconnect", () => {
     console.log("🔌 Client disconnected", { socketId: socket.id });
   });

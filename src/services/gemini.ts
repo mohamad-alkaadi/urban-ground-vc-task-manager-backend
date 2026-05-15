@@ -12,6 +12,7 @@ export const genAI = new GoogleGenerativeAI(
   process.env.GEMINI_API_KEY as string,
 );
 
+// Define the schema for a task, which will be used in tool definitions.
 const TaskSchema = {
   id: {
     type: SchemaType.NUMBER,
@@ -31,6 +32,7 @@ const TaskSchema = {
   } as Schema,
 };
 
+// Define the tools that the Gemini model can call, based on the taskAgent functions.
 export const taskTools: Tool = {
   functionDeclarations: [
     {
@@ -85,6 +87,7 @@ export const taskTools: Tool = {
   ],
 };
 
+// Base system instructions for the Gemini model, emphasizing safety, context handling, and conversational style.
 export const BASE_SYSTEM_INSTRUCTIONS = `
     You are a real AI voice agent for a task manager. 
 
@@ -108,6 +111,7 @@ export const BASE_SYSTEM_INSTRUCTIONS = `
     3. FRIENDLY FORMATS: Use natural time and never include seconds.
 `;
 
+// Function to get a Gemini model instance with dynamic system instructions based on the current time context.
 export const getModel = (timeContext: string) => {
   const dynamicInstruction = `
     ${BASE_SYSTEM_INSTRUCTIONS}
