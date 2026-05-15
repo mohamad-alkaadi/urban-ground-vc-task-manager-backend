@@ -3,8 +3,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import * as dotenv from "dotenv";
-import pinoHttp from "pino-http";
 import { processUserIntent } from "./services/orchestrator";
+import { Content } from "@google/generative-ai";
 
 dotenv.config();
 
@@ -42,9 +42,10 @@ io.on("connection", (socket) => {
   console.log("🔌 New client connected via WebSocket", {
     socketId: socket.id,
   });
+
   socket.on(
     "user-message",
-    async (data: { message: string; history: any[] }) => {
+    async (data: { message: string; history: Content[] }) => {
       console.log("🎙️ Received voice-to-text message", {
         socketId: socket.id,
       });
@@ -55,7 +56,6 @@ io.on("connection", (socket) => {
           text: result.text,
           tasks: result.tasks,
           updatedHistory: result.updatedHistory,
-          // isSilent: result.isSilent || false,
         });
         console.log("📤 Sent AI response back to client", {
           socketId: socket.id,

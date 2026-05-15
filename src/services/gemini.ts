@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI, SchemaType, Tool } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  Schema,
+  SchemaType,
+  Tool,
+} from "@google/generative-ai";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -7,7 +12,25 @@ export const genAI = new GoogleGenerativeAI(
   process.env.GEMINI_API_KEY as string,
 );
 
-// 1. Define the tools the AI can use to manage tasks [cite: 27, 28]
+const TaskSchema = {
+  id: {
+    type: SchemaType.NUMBER,
+    description: "The unique ID of the task.",
+  } as Schema,
+  title: {
+    type: SchemaType.STRING,
+    description: "The task description.",
+  } as Schema,
+  due_date: {
+    type: SchemaType.STRING,
+    description: "The time or date (ISO format).",
+  } as Schema,
+  status: {
+    type: SchemaType.STRING,
+    description: "New status: 'pending' or 'completed'.",
+  } as Schema,
+};
+
 export const taskTools: Tool = {
   functionDeclarations: [
     {
@@ -16,14 +39,8 @@ export const taskTools: Tool = {
       parameters: {
         type: SchemaType.OBJECT,
         properties: {
-          title: {
-            type: SchemaType.STRING,
-            description: "The task description.",
-          },
-          due_date: {
-            type: SchemaType.STRING,
-            description: "The time or date (ISO format).",
-          },
+          title: TaskSchema.title,
+          due_date: TaskSchema.due_date,
         },
         required: ["title"],
       },
@@ -39,25 +56,13 @@ export const taskTools: Tool = {
       parameters: {
         type: SchemaType.OBJECT,
         properties: {
-          id: {
-            type: SchemaType.NUMBER,
-            description: "The unique ID of the task to update.",
-          },
+          id: TaskSchema.id,
           updates: {
             type: SchemaType.OBJECT,
             properties: {
-              title: {
-                type: SchemaType.STRING,
-                description: "The new description.",
-              },
-              due_date: {
-                type: SchemaType.STRING,
-                description: "The new ISO time/date.",
-              },
-              status: {
-                type: SchemaType.STRING,
-                description: "New status: 'pending' or 'completed'.",
-              },
+              title: TaskSchema.title,
+              due_date: TaskSchema.due_date,
+              status: TaskSchema.status,
             },
             description:
               "An object containing only the fields that need changing.",
@@ -72,13 +77,14 @@ export const taskTools: Tool = {
       parameters: {
         type: SchemaType.OBJECT,
         properties: {
-          id: { type: SchemaType.NUMBER, description: "The task ID." },
+          id: TaskSchema.id,
         },
         required: ["id"],
       },
     },
   ],
 };
+
 export const BASE_SYSTEM_INSTRUCTIONS = `
     You are a real AI voice agent for a task manager. 
 
@@ -86,6 +92,7 @@ export const BASE_SYSTEM_INSTRUCTIONS = `
     1. MANDATORY DELETE CONFIRMATION: You MUST ask for verbal confirmation before calling "deleteTask" for ANY number of tasks. 
     2. NO "DELETE ALL": You are strictly forbidden from deleting all tasks at once. 
     3. MULTIPLE TASK HANDLING: Process multiple requests in one turn.
+    4. DELETE VS. COMPLETE: When the user says "delete," it strictly means to permanently remove the task. Do NOT interpret "delete" as marking a task as complete.
 
     CONVERSATIONAL & CONTEXT RULES:
     1. CONTEXT & IDs: When a user refers to "the latest one" or "the previous one," search history for the ID.
@@ -100,8 +107,19 @@ export const BASE_SYSTEM_INSTRUCTIONS = `
     2. TIMESTAMP PRIVACY: Only mention the creation time if the user explicitly asks.
     3. FRIENDLY FORMATS: Use natural time and never include seconds.
 `;
-// 2. Initialize the model with the tools
-// export const model = genAI.getGenerativeModel({
-//   model: "gemini-2.5-flash-lite",
-//   tools: [taskTools],
-// });
+
+export const getModel = (timeContext: string) => {
+  const dynamicInstruction = `
+    ${BASE_SYSTEM_INSTRUCTIONS}
+    
+    CRITICAL TIME CONTEXT:
+    - Today's Date and Time: ${timeContext}
+    - Location: Berlin, Germany
+  `;
+
+  return genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    tools: [taskTools],
+    systemInstruction: dynamicInstruction,
+  });
+};
