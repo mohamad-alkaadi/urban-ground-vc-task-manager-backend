@@ -66,15 +66,20 @@ io.on("connection", (socket) => {
           text: result.text,
           tasks: result.tasks,
           updatedHistory: result.updatedHistory,
+          error: result.error || null,
         });
         console.log("📤 Sent AI response back to client", {
           socketId: socket.id,
+          hasError: result.error,
         });
       } catch (error: any) {
         // If there is an error during the processing of the user's message, we log the error and emit an error message back to the client.
         console.log("❌ WebSocket Processing Error", { error: error.message });
-        socket.emit("error", {
-          message: "Something went wrong processing your voice.",
+        socket.emit("ai-response", {
+          text: "An unexpected system exception occurred. Please try again.",
+          tasks: [],
+          updatedHistory: data.history || [],
+          error: true, // Fallback safety flag
         });
       }
     },
